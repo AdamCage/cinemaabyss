@@ -1,0 +1,101 @@
+@startuml
+' CinemaAbyss — To-Be Container Diagram (C4: Container level)
+' Render with PlantUML + C4-PlantUML:
+'   !includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+LAYOUT_WITH_LEGEND()
+
+title «КиноБездна» — целевая архитектура (Container diagram)
+
+' ===================== Actors =====================
+Person(user, "Пользователь", "Использует Web, Mobile App, Smart TV App")
+
+' ===================== System boundary =====================
+System_Boundary(ca, "Онлайн-кинотеатр «КиноБездна»") {
+
+  ' ---------- Frontends ----------
+  Container_Boundary(front, "Фронтенд-платформы") {
+    Container(web, "Web Frontend (SPA)", "TypeScript/React", "Веб-клиент. Работает через API Gateway")
+    Container(mapp, "Mobile App", "iOS/Android", "Мобильное приложение. Работает через API Gateway")
+    Container(tvapp, "Smart TV App", "Tizen/webOS/tvOS", "ТВ-клиент. Работает через API Gateway")
+  }
+
+  ' ---------- API Gateway ----------
+  Container_Boundary(edge, "Единая точка входа") {
+    Container(proxy, "API Gateway / Proxy", "HTTPS (REST)", "Единая точка вызова сервисов; маршрутизация, аутентификация, rate limiting, feature-flag для поэтапной миграции (Strangler Fig).")
+  }
+
+  ' ---------- Legacy Monolith ----------
+  System_Boundary(mono_sys, "Legacy-Монолит") {
+    Container(monolith, "Монолит (legacy)", "Go + REST", "Оставшиеся домены. Ограничен интеграциями: только API Gateway, общая БД и внешние системы.")
+  
+    ' ---------- Shared Data Stores ----------
+    ContainerDb(pg, "PostgreSQL", "RDBMS", "Общая транзакционная БД (пока общая)")
+    Container(blob, "Object Storage", "S3-совместимое", "Постеры, превью, видео-ассеты, статический контент")
+    
+  }
+
+  ' ---------- Domain Microservices ----------
+    System_Boundary(micro_sys, "Микросевисы по доменам") {
+    Container(auth, "Auth Service", "Go/HTTP", "Авторизация/аутентификация, управление сессиями/токенами")
+    Container(meta, "Metadata Service", "Go/HTTP", "Метаданные фильмов: названия, жанры, описания, рейтинги, поиск")
+    Container(s3movies, "Open Movies Service", "Go/HTTP", "Открытие/выдача фильмов и постеров из объектного хранилища (URL, подписи, CDN)")
+    Container(extmovies, "External Movies Aggregator", "Go/HTTP", "Фильмы из внешних онлайн-кинотеатров: агрегация каталогов/метаданных")
+    Container(payments, "Payment Service", "Go/HTTP", "Платежи и подписки: инициирование/валидирование/вебхуки")
+    Container(reco_svc, "Recommendations Service", "Go/HTTP", "Сервис рекомендаций (оркестрация/кеш), общается с внешней рекомендательной системой")
+  }
+
+}
+
+' ===================== External Systems =====================
+System_Boundary(internet, "Интернет") {
+  System_Ext(pay_ext, "Платежная система", "Внешний REST API")
+  System_Ext(reco_ext, "Сервис рекомендаций", "Внешний сервис/ML-провайдер")
+  System_Ext(oc_ext, "Онлайн-кинотеатры", "Внешние провайдеры контента/каталогов")
+}
+
+' ===================== Relationships =====================
+
+' Users -> Frontends
+Rel(user, web, "Использование", "HTTPS")
+Rel(user, mapp, "Использование", "HTTPS")
+Rel(user, tvapp, "Использование", "HTTPS")
+
+' Frontends -> API Gateway
+Rel(web, proxy, "API вызовы", "HTTPS/JSON")
+Rel(mapp, proxy, "API вызовы", "HTTPS/JSON")
+Rel(tvapp, proxy, "API вызовы", "HTTPS/JSON")
+
+' API Gateway -> Internal Services
+Rel(proxy, auth, "Маршрутизация", "HTTP/REST")
+Rel(proxy, meta, "Маршрутизация", "HTTP/REST")
+Rel(proxy, s3movies, "Маршрутизация", "HTTP/REST")
+Rel(proxy, extmovies, "Маршрутизация", "HTTP/REST")
+Rel(proxy, payments, "Маршрутизация", "HTTP/REST")
+Rel(proxy, reco_svc, "Маршрутизация", "HTTP/REST")
+Rel(proxy, monolith, "Маршрутизация (остаточные домены)", "HTTP/REST")
+
+' Monolith constraints (only GW, DB, externals)
+Rel(monolith, pg, "SQL", "CRUD (общая БД)")
+Rel(monolith, blob, "S3 API", "Импорт каталогов/метаданных, синхронизация")
+Rel(monolith, pay_ext, "HTTP", "Авторизация платежей/вебхуки")
+Rel(monolith, reco_ext, "HTTP/AMQP", "Получение рекомендаций")
+Rel(monolith, oc_ext, "HTTP", "Интеграции с внешними каталогами")
+
+' Internal Services -> Data Stores
+Rel(auth, pg, "SQL", "Учетные записи, сессии, ключи")
+Rel(meta, pg, "SQL", "Каталожные данные/поиск")
+Rel(payments, pg, "SQL", "Подписки, транзакции")
+Rel(reco_svc, pg, "SQL", "Кеш рекомендаций/поведенка")
+Rel(extmovies, pg, "SQL", "Кеш внешних каталогов/соответствия")
+Rel(s3movies, blob, "S3 API", "Ссылки/подписи/загрузка контента")
+
+' Internal Services -> Externals
+Rel(payments, pay_ext, "HTTP", "Инициирование/валидация платежей, вебхуки")
+Rel(reco_svc, reco_ext, "HTTP/gRPC", "Запрос рекомендаций/фич")
+Rel(extmovies, oc_ext, "HTTP", "Импорт каталогов/метаданных, синхронизация")
+
+' ===================== Styling =====================
+SHOW_LEGEND()
+@enduml
