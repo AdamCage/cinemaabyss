@@ -38,13 +38,22 @@ System_Boundary(ca, "Онлайн-кинотеатр «КиноБездна»") 
 
   ' ---------- Domain Microservices ----------
     System_Boundary(micro_sys, "Микросевисы по доменам") {
-    Container(auth, "Auth Service", "Go/HTTP", "Авторизация/аутентификация, управление сессиями/токенами")
-    Container(meta, "Metadata Service", "Go/HTTP", "Метаданные фильмов: названия, жанры, описания, рейтинги, поиск")
-    Container(s3movies, "Open Movies Service", "Go/HTTP", "Открытие/выдача фильмов и постеров из объектного хранилища (URL, подписи, CDN)")
-    Container(extmovies, "External Movies Aggregator", "Go/HTTP", "Фильмы из внешних онлайн-кинотеатров: агрегация каталогов/метаданных")
-    Container(payments, "Payment Service", "Go/HTTP", "Платежи и подписки: инициирование/валидирование/вебхуки")
-    Container(reco_svc, "Recommendations Service", "Go/HTTP", "Сервис рекомендаций (оркестрация/кеш), общается с внешней рекомендательной системой")
-  }
+      Container(auth, "Auth Service", "Go/HTTP", "Авторизация/аутентификация, управление сессиями/токенами")
+      Container(meta, "Metadata Service", "Go/HTTP", "Метаданные фильмов: названия, жанры, описания, рейтинги, поиск")
+      Container(s3movies, "Open Movies Service", "Go/HTTP", "Открытие/выдача фильмов и постеров из объектного хранилища (URL, подписи, CDN)")
+      Container(extmovies, "External Movies Aggregator", "Go/HTTP", "Фильмы из внешних онлайн-кинотеатров: агрегация каталогов/метаданных")
+      Container(payments, "Payment Service", "Go/HTTP", "Платежи и подписки: инициирование/валидирование/вебхуки")
+      Container(reco_svc, "Recommendations Service", "Go/HTTP", "Сервис рекомендаций (оркестрация/кеш), общается с внешней рекомендательной системой")
+      Container(kafka, "Kafka", "Брокер сообщений", "Асинхронная коммуникация между сервисами")
+
+      Rel(auth, kafka, "")
+      Rel(meta, kafka, "")
+      Rel(s3movies, kafka, "")
+      Rel(extmovies, kafka, "")
+      Rel(payments, kafka, "")
+      Rel(reco_svc, kafka, "")
+    
+    }
 
 }
 
