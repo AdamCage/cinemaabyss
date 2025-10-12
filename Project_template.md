@@ -276,9 +276,14 @@ cat .docker/config.json | base64
   Часть тестов с health-чек упадет, но создание событий отработает.
   Откройте логи event-service и сделайте скриншот обработки событий
 
+- [logs-event-service](docs/logs-event-service.png)
+
 #### Шаг 3
 Добавьте сюда скриншота вывода при вызове https://cinemaabyss.example.com/api/movies и  скриншот вывода event-service после вызова тестов.
 
+1. [cinemaabyss.example.com-api-movie](docs/cinemaabyss.example.com-api-movies.png)
+2. [test-kubernetes-pass-proof](docs/test-kubernetes-pass-proof.png)
+3. [logs-event-service](docs/logs-event-service.png)
 
 ## Задание 4
 Для простоты дальнейшего обновления и развертывания вам как архитектуру необходимо так же реализовать helm-чарты для прокси-сервиса и проверить работу 
@@ -354,6 +359,9 @@ minikube tunnel
 https://cinemaabyss.example.com/api/movies
 и приложите скриншот развертывания helm и вывода https://cinemaabyss.example.com/api/movies
 
+1. [helm-cinemaabyss.example.com-api-movie](docs/helm-cinemaabyss.example.com-api-movies.png)
+2. [helm-deploy](docs/helm-deploy.png)
+
 
 # Задание 5
 Компания планирует активно развиваться и для повышения надежности, безопасности, реализации сетевых паттернов типа Circuit Breaker и канареечного деплоя вам как архитектору необходимо развернуть istio и настроить circuit breaker для monolith и movies сервисов.
@@ -427,3 +435,5 @@ kubectl delete namespace istio-system
 kubectl delete all --all -n cinemaabyss
 kubectl delete namespace cinemaabyss
 ```
+
+- [circuit-breaker](docs/circuit-breaker.png)
