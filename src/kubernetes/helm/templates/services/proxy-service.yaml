@@ -23,9 +23,44 @@ spec:
       labels:
         app: proxy-service
     spec:
+      {{- if .Values.imagePullSecrets.dockerconfigjson }}
+      imagePullSecrets:
+        - name: dockerconfigjson
+      {{- end }}
       containers:
-      - name: proxy-service
-        ..... тут
+        - name: proxy-service
+          image: "{{ .Values.proxyService.image.repository }}:{{ .Values.proxyService.image.tag }}"
+          imagePullPolicy: {{ .Values.proxyService.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.proxyService.service.targetPort }}
+          env:
+            - name: PORT
+              value: "{{ .Values.proxyService.service.targetPort }}"
+            - name: MONOLITH_URL
+              value: "http://monolith:{{ .Values.monolith.service.port }}"
+            - name: MOVIES_SERVICE_URL
+              value: "http://movies-service:{{ .Values.moviesService.service.port }}"
+            - name: EVENTS_SERVICE_URL
+              value: "http://events-service:{{ .Values.eventsService.service.port }}"
+            - name: GRADUAL_MIGRATION
+              value: "{{ .Values.config.gradualMigration }}"
+            - name: MOVIES_MIGRATION_PERCENT
+              value: "{{ .Values.config.moviesMigrationPercent }}"
+          resources:
+            limits:
+              cpu: {{ .Values.proxyService.resources.limits.cpu }}
+              memory: {{ .Values.proxyService.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.proxyService.resources.requests.cpu }}
+              memory: {{ .Values.proxyService.resources.requests.memory }}
+          readinessProbe:
+            httpGet: { path: /health, port: {{ .Values.proxyService.service.targetPort }} }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: {{ .Values.proxyService.service.targetPort }} }
+            initialDelaySeconds: 15
+            periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service
@@ -38,5 +73,10 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   selector:
-    ... и тут
+    app: proxy-service
+  ports:
+    - name: http
+      port: {{ .Values.proxyService.service.port }}
+      targetPort: {{ .Values.proxyService.service.targetPort }}
+  type: {{ .Values.proxyService.service.type }}
 {{- end }}
